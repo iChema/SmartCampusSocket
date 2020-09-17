@@ -16,25 +16,24 @@ class Users {
 
     getUserList() {
         let list = [];
-        this.users.forEach(user =>  list.push(user.curp));
+        this.users.forEach(user => list.push(user.curp));
 
         return list;
     }
 
-    getUserByID(id) {
+    getUser(id) {
         return this.users.filter((user) => user.id === id)[0];
     }
 
-    getUserByCURP(curp) {
+    getUser2(curp) {
         return this.users.filter((user) => user.curp === curp)[0];
     }
 
     removeUser(curp) {
-        //let user = this.getUser(id);
-        let user = this.getUserByCURP(curp);
+        let user = this.getUser2(curp);
 
-        if(user){
-            this.users = this.users.filter((user) => user.curp  !== curp);
+        if (user) {
+            this.users = this.users.filter((user) => user.curp !== curp);
         }
 
         return user;
@@ -44,69 +43,43 @@ class Users {
 
 var users = new Users();
 
-io.sockets.on('connection', function(socket) {
-    /*
-    socket.on('new user', function (data , callback) {
-        if (data in numeroControl){
-            callback(false);
-        } else {
-            callback(true);
-            socket.user = data;
-            numeroControl[socket.user] = socket;
-            updateUsers();
-        }
-    });
-    socket.on('join', (userID , callback) => {
-        console.log('llego');
-        socket.join(userID);
-        users.removeUser(socket.id);
-        users.addUser(socket.id, userID);
-        console.log(users.getUserList());
-        callback();
-    });
-    socket.on('message', function(msg){
-        let user = users.getUser(socket.id);
-
-        if(user){
-            io.sockets.to(user.numeroControl).emit('message', msg);
-        }
-    });
-    */
-
+io.sockets.on('connection', function (socket) {
+    //console.log('New User');
     socket.on('join', (userID, callback) => {
-        //console.log('Usuarios conectados');
+        console.log('Usuarios conectados');
         users.removeUser(userID.curp);
         socket.join(userID.sala);
         users.addUser(socket.id, userID.curp, userID.sala);
-        //console.log(users.getUserList());
+        console.log(users.getUserList());
         callback();
     });
 
-    socket.on('joinAgent', () => {uninstall
+    socket.on('joinAgent', () => {
         console.log(users.getUserList());
     });
 
     socket.on('message', function (msg) {
-        let user = users.getUserByID(socket.id);
+        let user = users.getUser(socket.id);
 
         if (user) {
             io.sockets.to(user.sala).emit('message', msg);
         }
     });
 
-    socket.on('my response', function(msg){
-        console.log(msg);
-        socket.emit('hola','Hola Agente, soy el socket');
-    });
-
     function updateUsers() {
         io.sockets.emit('users', Object.keys(curp))
     }
 
-    socket.on('disconnect', function (data) {
-        if(!socket.user) return;
-        delete numeroControl[socket.user];
-        updateUsers()
+    socket.on('disconnect', () => {
+        let user = users.getUser(socket.id);
+
+        if (user) {
+            users.removeUser(user.curp);
+            console.log('Socket disconnected: ' + user.curp);
+            console.log('Usuarios conectados');
+            console.log(users.getUserList());
+        }
+        updateUsers();
     })
 });
 
