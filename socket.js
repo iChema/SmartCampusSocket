@@ -103,7 +103,7 @@ async function testDB() {
     try {
         await client.connect();
 
-        const database = client.db("agents");
+        const database = client.db("smart_campus");
         const collection = database.collection("agents");
     
         // Query for a movie that has the title 'The Room'
