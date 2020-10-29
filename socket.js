@@ -1,3 +1,9 @@
+const { MongoClient } = require("mongodb");
+
+const dotenv = require('dotenv');
+dotenv.config();
+const uri = process.env.URI;
+const client = new MongoClient(uri);
 var http = require('http');
 var server = http.createServer();
 var io = require('socket.io').listen(server);
@@ -43,7 +49,7 @@ class Users {
 
 var users = new Users();
 
-io.sockets.on('connection', function (socket) {
+io.sockets.on('connection', function (socket) {    
     //console.log('New User');
     socket.on('join', (userID, callback) => {
         console.log('Usuarios conectados');
@@ -83,10 +89,33 @@ io.sockets.on('connection', function (socket) {
     })
 });
 
-server.listen(3000, function(){
+server.listen(process.env.PORT, function(){
     console.log('Servidor de sockets activo');
+
+    testDB();
 });
 
 function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
+}
+
+async function testDB() {
+    try {
+        await client.connect();
+
+        const database = client.db("agents");
+        const collection = database.collection("agents");
+    
+        // Query for a movie that has the title 'The Room'
+        const query = { id: 1 };
+    
+        const options = {};
+    
+        const agent = await collection.findOne(query, options);
+    
+        // since this method returns the matched document, not a cursor, print it directly
+        console.log(agent);
+      } finally {
+        await client.close();
+      }
 }
