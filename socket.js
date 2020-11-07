@@ -3,8 +3,8 @@ const { MongoClient } = require("mongodb");
 const dotenv = require('dotenv');
 dotenv.config();
 const uri = process.env.URI;
-const client = new MongoClient(uri);
 var http = require('http');
+const { get } = require("https");
 var server = http.createServer();
 var io = require('socket.io').listen(server);
 var databaseName = process.env.DATABASE_NAME
@@ -49,6 +49,7 @@ class Users {
 }
 
 var users = new Users();
+var agents = new Users();
 
 io.sockets.on('connection', function (socket) {    
     //console.log('New User');
@@ -58,11 +59,17 @@ io.sockets.on('connection', function (socket) {
         socket.join(userID.sala);
         users.addUser(socket.id, userID.curp, userID.sala);
         console.log(users.getUserList());
+        getAgentsOnlineDB(socket.id);
         callback();
     });
 
-    socket.on('joinAgent', () => {
-        console.log(users.getUserList());
+    socket.on('joinAgent', (userID) => {
+        console.log('Agentes conectados');
+        agents.removeUser(userID.curp);
+        socket.join(userID.sala);
+        agents.addUser(socket.id, userID.curp, userID.sala);
+        console.log(agents.getUserList());
+        getAgentsOnlineDB(socket.id);
     });
 
     socket.on('message', function (msg) {
@@ -78,7 +85,7 @@ io.sockets.on('connection', function (socket) {
     }
 
     socket.on('getAgentsOnline', ()=>{
-        getAgentsOnlineDB();
+        getAgentsOnlineDB(socket.id);
     });
 
     socket.on('disconnect', () => {
@@ -97,7 +104,8 @@ io.sockets.on('connection', function (socket) {
 server.listen(process.env.PORT, function(){
     console.log('Servidor de sockets activo');
 
-    getAgentsOnlineDB();
+    //testDB();
+    //getAgentsOnlineDB();
 });
 
 function onlyUnique(value, index, self) {
@@ -115,10 +123,11 @@ function getMacAddressList(agentsOnline) {
     return list;
 }
 
-async function getAgentsOnlineDB() {
-    try {
-        await client.connect();
+async function getAgentsOnlineDB(id) {
+    
+    var client = new MongoClient(uri);
 
+    await client.connect().then((client)=> {
         const database = client.db(databaseName);
         const collection = database.collection("agent");
     
@@ -127,19 +136,18 @@ async function getAgentsOnlineDB() {
      
         const options = {};
     
-        const agents = await collection.find(query, options)
-        .toArray()
-        .then(agentsOnline => {
-            //return agentsOnline
-            io.sockets.emit('setAgentOnline', getMacAddressList(agentsOnline));
-            console.log(getMacAddressList(agentsOnline));
-        });
-    } catch(e) {
+        collection.find(query, options).toArray(function(err, result) {
+            if (err) throw err;
+            console.log(result);
+            console.log(getMacAddressList(result));
+            io.sockets.to(id).emit('setAgentOnline', getMacAddressList(result));
+            client.close();
+          });
+    }).catch((e)=>{
         console.log(e);
-        await client.close();
-    }finally {
-        await client.close();
-    }
+    });
+
+    
 }
 
 async function testDB() {
@@ -147,17 +155,18 @@ async function testDB() {
         await client.connect();
 
         const database = client.db("smart_campus");
-        const collection = database.collection("agents");
+        const collection = database.collection("agent");
     
         // Query for a movie that has the title 'The Room'
-        const query = { id: 1 };
+        const query = {status : "online"};
     
         const options = {};
     
-        const agent = await collection.findOne(query, options);
+        const agent = await collection.find(query, options).toArray()
+        .then(agentsOnline => {
+            console.log(getMacAddressList(agentsOnline));
+        });
     
-        // since this method returns the matched document, not a cursor, print it directly
-        console.log(agent);
     } finally {
         await client.close();
     }
