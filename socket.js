@@ -63,13 +63,20 @@ io.sockets.on('connection', function (socket) {
         callback();
     });
 
-    socket.on('joinAgent', (userID) => {
+    socket.on('here',(macAgent)=> {
+        try{
+            agentId = int(macAgent.replace(':', ''), 16)
+            user = users.getUser(socket.id);
+            updateUserPosition(agentId,user.curp);
+        } catch (e) {}
+    });
+
+    socket.on('joinAgent', (agentId) => {
         console.log('Agentes conectados');
-        agents.removeUser(userID.curp);
-        socket.join(userID.sala);
-        agents.addUser(socket.id, userID.curp, userID.sala);
+        agents.removeUser(agentId);
+        agents.addUser(socket.id, agentId, 0);
         console.log(agents.getUserList());
-        getAgentsOnlineDB(socket.id);
+        setAgentOnline(agentId,true);
     });
 
     socket.on('message', function (msg) {
@@ -123,6 +130,47 @@ function getMacAddressList(agentsOnline) {
     return list;
 }
 
+async function setAgentOnline(agentId,bool) {
+    var client = new MongoClient(uri);
+    let status =  (bool) ? 'online' : 'offline'
+
+    await client.connect().then((client)=> {
+        const database = client.db(databaseName);
+        const collection = database.collection("agent");
+    
+        // Query for a agents that has the status 'online'
+        const query = { _id : agentId };
+     
+        const options = {};
+    
+        collection.updateOne(query, { 'status' :  } ,options).toArray(function(err, result) {
+            if (err) throw err;
+            client.close();
+          });
+    }).catch((e)=>{
+        console.log(e);
+    });
+}
+
+async function updateUserPosition(agentId,userId){
+    var client = new MongoClient(uri);
+
+    await client.connect().then((client)=> {
+        const database = client.db(databaseName);
+        const collection = database.collection("position_user");
+    
+        collection.insertOne({
+            'agent': agentId,
+            'user' : userId,
+            'updatedAt' : new Date() 
+        },()=>{
+            client.close();
+        })
+    }).catch((e)=>{
+        console.log(e);
+    });
+}
+
 async function getAgentsOnlineDB(id) {
     
     var client = new MongoClient(uri);
@@ -131,7 +179,7 @@ async function getAgentsOnlineDB(id) {
         const database = client.db(databaseName);
         const collection = database.collection("agent");
     
-        // Query for a movie that has the title 'The Room'
+        // Query for a agents that has the status 'online'
         const query = { status : "online" };
      
         const options = {};
@@ -146,8 +194,6 @@ async function getAgentsOnlineDB(id) {
     }).catch((e)=>{
         console.log(e);
     });
-
-    
 }
 
 async function testDB() {
