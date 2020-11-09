@@ -103,15 +103,22 @@ io.sockets.on('connection', function (socket) {
             console.log('Socket disconnected: ' + user.curp);
             console.log('Usuarios conectados');
             console.log(users.getUserList());
+        } else {
+            let agent = agents.getUser(socket.id);
+            if(agent) {
+                agents.removeUser(agent.curp);
+                console.log('Agente disconnected: ' + agent.curp);
+                console.log('Agentes conectados');
+                console.log(agents.getUserList());
+            }
         }
-        updateUsers();
     })
 });
 
 server.listen(process.env.PORT, function(){
     console.log('Servidor de sockets activo');
 
-    //testDB();
+    testDB();
     //getAgentsOnlineDB();
 });
 
@@ -198,6 +205,8 @@ async function getAgentsOnlineDB(id) {
 
 async function testDB() {
     try {
+        var client = new MongoClient(uri);
+
         await client.connect();
 
         const database = client.db("smart_campus");
