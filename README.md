@@ -9,9 +9,9 @@ sudo apt install nodejs npm
 ```
 Use the package manager [npm](https://www.npmjs.com/package/npm) to install [socket.io](https://socket.io/docs/).
 ```bash
-npm install socket.io
-npm install dotenv
-npm install mongodb
+npm install socket.io@2.3.0
+npm install dotenv@8.2.0
+npm install mongodb@3.6.2
 ```
 ## Usage
 ```bash
